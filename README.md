@@ -28,7 +28,7 @@ Once you have deployed Microshift, add some GitOps magic with this [repo](https:
 Edit the `inventory` file to specify the target host(s). For example:
 
 ```yaml
-[all]
+[servers]
 192.168.1.213
 ```
 ### 2. Set Variables
