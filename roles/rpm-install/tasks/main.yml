@@ -97,13 +97,12 @@
     creates: /etc/microshift/config.yaml
   become: true
 
-- name: Update the baseDomain in /etc/microshift/config.yaml within the dns section
+- name: Replace baseDomain value in /etc/microshift/config.yaml
   ansible.builtin.replace:
     path: /etc/microshift/config.yaml
-    regexp: '(dns:.*?baseDomain:)\s+\S+'
-    replace: '\1 {{ baseDomain }}'
+    regexp: '^(\s*baseDomain:\s)example\.com'
+    replace: '\1{{ baseDomain }}'
     owner: root
     group: root
     mode: "0644"
   become: true
-  validate: 'python3 -c "import yaml; yaml.safe_load(open(\'%s\'))"'
