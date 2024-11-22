@@ -2,6 +2,8 @@
 
 This Ansible playbook automates the installation and configuration of MicroShift on a Red Hat Enterprise Linux 9 (RHEL 9) host. It supports dynamic versioning and ensures all necessary dependencies and configurations are in place for a functional MicroShift environment.
 
+Once you have deployed Microshift, add some GitOps magic with this [repo](https://github.com/turbra/microshift-homelab/).
+
 ## Features
 
 - Dynamically specify the MicroShift version using `rpm_install_version`.
