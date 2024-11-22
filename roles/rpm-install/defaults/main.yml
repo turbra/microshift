@@ -1,0 +1,4 @@
+---
+microshift_pull_secret: "{{ lookup('file', '~/pull-secret.txt') }}"
+ansible_non_root_user: <define your user>
+ansible_non_root_user_dir: "/home/<your user>"

@@ -1,0 +1,108 @@
+---
+    
+- name: Setup Repositories
+  community.general.rhsm_repository:
+    state: enabled
+    purge: true
+    name:
+      - "rhel-{{ ansible_distribution_major_version }}-for-x86_64-appstream-rpms"
+      - "rhel-{{ ansible_distribution_major_version }}-for-x86_64-baseos-rpms"
+      - "rhocp-{{ rpm_install_version.split('.')[0] }}.{{ rpm_install_version.split('.')[1] }}-for-rhel-{{ ansible_distribution_major_version }}-{{ ansible_architecture }}-rpms"
+      - "fast-datapath-for-rhel-{{ ansible_distribution_major_version }}-x86_64-rpms"
+      - "gitops-1.12-for-rhel-{{ ansible_distribution_major_version }}-x86_64-rpms"
+  when:
+    - ansible_distribution == 'RedHat'
+
+- name: Install MicroShift and dependencies
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - microshift
+    - microshift-olm
+    - microshift-gitops
+
+- name: Copy pull secret
+  ansible.builtin.copy:
+    content: "{{ microshift_pull_secret }}"
+    dest: /etc/crio/openshift-pull-secret
+    owner: root
+    mode: "0600"
+
+- name: Add trusted sources to firewalld
+  ansible.posix.firewalld:
+    source: "{{ item }}"
+    zone: trusted
+    permanent: true
+    state: enabled
+  loop:
+    - 10.42.0.0/16
+    - 169.254.169.1
+
+- name: Add required ports to firewalld in the public zone
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    zone: public
+    permanent: true
+    state: enabled
+  loop:
+    - 6443/tcp
+    - 443/tcp
+    - 80/tcp
+
+- name: Reload firewalld service
+  ansible.builtin.systemd:
+    name: firewalld
+    state: reloaded
+
+- name: Start and enable MicroShift service
+  ansible.builtin.systemd:
+    name: microshift
+    state: started
+    enabled: true
+
+- name: Create the .kube directory
+  ansible.builtin.file:
+    path: "{{ ansible_non_root_user_dir }}/.kube"
+    state: directory
+    owner: "{{ ansible_non_root_user }}"
+    group: "{{ ansible_non_root_user }}"
+    mode: "0755"
+
+- name: Check if kubeconfig exists
+  ansible.builtin.command:
+    cmd: "test -f {{ ansible_non_root_user_dir }}/.kube/config"
+  ignore_errors: true
+  register: kubeconfig_check
+
+- name: Copy kubeconfig to .kube/config if not exists
+  ansible.builtin.command:
+    cmd: "cat /var/lib/microshift/resources/kubeadmin/kubeconfig"
+  when: kubeconfig_check.rc != 0
+  register: kubeconfig_output
+  become: true
+
+- name: Write kubeconfig to .kube/config
+  ansible.builtin.copy:
+    content: "{{ kubeconfig_output.stdout }}"
+    dest: "{{ ansible_non_root_user_dir }}/.kube/config"
+    owner: "{{ ansible_non_root_user }}"
+    group: "{{ ansible_non_root_user }}"
+    mode: "0600"
+  when: kubeconfig_check.rc != 0
+
+- name: Move the default config file to the active config location
+  ansible.builtin.command:
+    cmd: mv /etc/microshift/config.yaml.default /etc/microshift/config.yaml
+    creates: /etc/microshift/config.yaml
+  become: true
+
+- name: Update the baseDomain in /etc/microshift/config.yaml
+  ansible.builtin.lineinfile:
+    path: /etc/microshift/config.yaml
+    regexp: '^baseDomain: .*'
+    line: "baseDomain: {{ baseDomain }}"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true

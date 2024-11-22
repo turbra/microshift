@@ -1,0 +1,5 @@
+- name: Configure RHEL9 host for MicroShift
+  hosts: servers
+  become: true
+  roles:
+    - rpm-install
