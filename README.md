@@ -29,11 +29,12 @@ Edit the `inventory` file to specify the target host(s). For example:
 
 ```yaml
 [all]
-192.168.1.213 ansible_user=turbra
+192.168.1.213
 ```
 ### 2. Set Variables
 
 Define default variables in `vars/main.yml`. Example:
+
 ```yaml
 rpm_install_version: 4.16
 ```
